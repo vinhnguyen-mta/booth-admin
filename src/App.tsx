@@ -152,6 +152,8 @@ const FrameNode = React.memo(function FrameNode({
   frameH: number;
 }) {
   const [imgEl] = useImage(layer.src, "anonymous");
+  console.log("frameW", frameW);
+  console.log("frameH", frameH);
   return (
     <KonvaImage
       image={imgEl || undefined}
@@ -201,6 +203,11 @@ const PhotoNode = React.memo(function PhotoNode({
 export default function App() {
   const [layers, setLayers] = useState<AnyLayer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const [sizeFrame, setFrame] = useState<any>({
+    width: 0,
+    height: 0,
+  });
   const selectedLayer = useMemo(
     () => layers.find((l) => l.id === selectedId),
     [layers, selectedId]
@@ -208,12 +215,27 @@ export default function App() {
 
   const trRef = useRef<any>(null);
   const nodeRefs = useRef<Record<string, any>>({});
+  const [dimensions, setDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
+
+  useEffect(() => {
+    if (wrapRef.current?.offsetHeight && wrapRef.current?.offsetWidth) {
+      console.log("wrapRef.current.offsetWidth", wrapRef.current.offsetWidth);
+      console.log("wrapRef.current.offsetHeight", wrapRef.current.offsetHeight);
+      setDimensions({
+        width: wrapRef.current.offsetWidth - 1,
+        height: wrapRef.current.offsetHeight - 1,
+      });
+    }
+  }, []);
 
   const frameLayer = layers.find((l) => l.kind === "frame") as
     | FrameLayer
     | undefined;
-  const frameW = frameLayer?.naturalW ?? 1080;
-  const frameH = frameLayer?.naturalH ?? 1920;
+  const frameW = frameLayer?.naturalW ?? 1680;
+  const frameH = frameLayer?.naturalH ?? 844;
 
   const { ref: wrapRef, size: wrap } = useContainerSize();
   const stageScale = useMemo(() => wrap.w / frameW, [wrap.w, frameW]);
@@ -242,19 +264,40 @@ export default function App() {
     setLayers(newBottomToTop.map((id) => idMap[id]));
   };
 
+  const resizeImg = (img: any) => {
+    console.log("dimensions", dimensions);
+    if (img.naturalWidth / img.naturalHeight > 1) {
+      return {
+        width: dimensions.width,
+        height: dimensions.width / (img.naturalWidth / img.naturalHeight),
+      };
+    } else {
+      return {
+        width: dimensions.height * (img.naturalWidth / img.naturalHeight),
+        height: dimensions.height,
+      };
+    }
+  };
+
   const addFrame = async () => {
     const file = await pickFile("image/*");
     if (!file) return;
     const img = new Image();
     img.onload = () => {
+      const imgSize = resizeImg(img);
+      console.log("width, height", imgSize);
+      setFrame({
+        width: imgSize.width,
+        height: imgSize.height,
+      });
       const layer: FrameLayer = {
         id: layers.find((l) => l.kind === "frame")?.id ?? nanoid(),
         kind: "frame",
         name: "Frame",
         visible: true,
         src: URL.createObjectURL(file),
-        naturalW: img.naturalWidth, // width img
-        naturalH: img.naturalHeight, // height img
+        naturalW: imgSize.width, // width img
+        naturalH: imgSize.height, // height img
       };
       setLayers((prev) => {
         const has = prev.find((l) => l.kind === "frame");
@@ -370,14 +413,22 @@ export default function App() {
   return (
     <div
       style={{
-        height: "100vh",
+        height: "100dvh",
+        width: "99vw",
         display: "grid",
         gridTemplateColumns: "1fr 320px",
         background: "#0d1117",
         color: "#c9d1d9",
       }}
     >
-      <div style={{ display: "grid", gridTemplateRows: "auto 1fr" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: "auto 1fr",
+          flex: 1,
+          height: "100%",
+        }}
+      >
         <div
           style={{
             padding: 10,
@@ -436,8 +487,8 @@ export default function App() {
           }}
         >
           <Stage
-            width={frameW}
-            height={frameH}
+            width={dimensions.width}
+            height={dimensions.height}
             scale={{ x: stageScale, y: stageScale }}
             style={{
               width: "100%",
@@ -457,8 +508,8 @@ export default function App() {
                     <FrameNode
                       key={l.id}
                       layer={l as FrameLayer}
-                      frameW={frameW}
-                      frameH={frameH}
+                      frameW={sizeFrame.width}
+                      frameH={sizeFrame.height}
                     />
                   );
                 }
