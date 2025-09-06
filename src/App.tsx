@@ -204,10 +204,6 @@ export default function App() {
   const [layers, setLayers] = useState<AnyLayer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const [sizeFrame, setFrame] = useState<any>({
-    width: 0,
-    height: 0,
-  });
   const selectedLayer = useMemo(
     () => layers.find((l) => l.id === selectedId),
     [layers, selectedId]
@@ -215,6 +211,9 @@ export default function App() {
 
   const trRef = useRef<any>(null);
   const nodeRefs = useRef<Record<string, any>>({});
+
+  const { ref: wrapRef, size: wrap } = useContainerSize();
+
   const [dimensions, setDimensions] = useState({
     width: 0,
     height: 0,
@@ -237,8 +236,12 @@ export default function App() {
   const frameW = frameLayer?.naturalW ?? 1680;
   const frameH = frameLayer?.naturalH ?? 844;
 
-  const { ref: wrapRef, size: wrap } = useContainerSize();
-  const stageScale = useMemo(() => wrap.w / frameW, [wrap.w, frameW]);
+  const stageScale = useMemo(() => {
+    if (!wrap.w || !wrap.h) return 1;
+    return Math.min(wrap.w / frameW, wrap.h / frameH);
+  }, [wrap.w, wrap.h, frameW, frameH]);
+
+  const stagePixW = Math.round(frameW * stageScale);
   const stagePixH = Math.round(frameH * stageScale);
 
   useEffect(() => {
@@ -285,11 +288,6 @@ export default function App() {
     const img = new Image();
     img.onload = () => {
       const imgSize = resizeImg(img);
-      console.log("width, height", imgSize);
-      setFrame({
-        width: imgSize.width,
-        height: imgSize.height,
-      });
       const layer: FrameLayer = {
         id: layers.find((l) => l.kind === "frame")?.id ?? nanoid(),
         kind: "frame",
@@ -419,14 +417,15 @@ export default function App() {
         gridTemplateColumns: "1fr 320px",
         background: "#0d1117",
         color: "#c9d1d9",
+        overflow: "hidden",
       }}
     >
       <div
         style={{
           display: "grid",
           gridTemplateRows: "auto 1fr",
-          flex: 1,
-          height: "100%",
+          minWidth: 0,
+          minHeight: 0,
         }}
       >
         <div
@@ -447,7 +446,7 @@ export default function App() {
               color: "#c9d1d9",
             }}
           >
-            ➕ Add Frame (1)
+            ➕ Add Frame
           </button>
           <button
             onClick={addPhoto}
@@ -484,14 +483,16 @@ export default function App() {
             overflow: "auto",
             display: "grid",
             placeItems: "start center",
+            minWidth: 0,
+            minHeight: 0,
           }}
         >
           <Stage
-            width={dimensions.width}
-            height={dimensions.height}
+            width={frameW}
+            height={frameH}
             scale={{ x: stageScale, y: stageScale }}
             style={{
-              width: "100%",
+              width: `${stagePixW}px`,
               height: `${stagePixH}px`,
               background: "#111",
             }}
@@ -508,8 +509,8 @@ export default function App() {
                     <FrameNode
                       key={l.id}
                       layer={l as FrameLayer}
-                      frameW={sizeFrame.width}
-                      frameH={sizeFrame.height}
+                      frameW={frameW}
+                      frameH={frameH}
                     />
                   );
                 }
