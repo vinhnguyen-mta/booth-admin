@@ -62,10 +62,8 @@ export default function App() {
 
   useEffect(() => {
     if (wrapRef.current?.offsetHeight && wrapRef.current?.offsetWidth) {
-      console.log("wrapRef.current.offsetWidth", wrapRef.current.offsetWidth);
-      console.log("wrapRef.current.offsetHeight", wrapRef.current.offsetHeight);
       setDimensions({
-        width: wrapRef.current.offsetWidth - 1,
+        width: wrapRef.current.offsetWidth - 1 - 320, // 320 là kích thước layers bên tay phải
         height: wrapRef.current.offsetHeight - 1,
       });
     }
@@ -329,7 +327,7 @@ export default function App() {
           }}
         >
           <Stage
-            width={frameW}
+            width={stagePixW}
             height={frameH}
             scale={{ x: stageScale, y: stageScale }}
             style={{
@@ -403,7 +401,7 @@ export default function App() {
       >
         <div
           style={{
-            padding: 12,
+            padding: "19px 16px 16px 16px",
             borderBottom: "1px solid #30363d",
             fontWeight: 700,
           }}
