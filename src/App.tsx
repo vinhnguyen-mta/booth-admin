@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Stage, Layer, Image as KonvaImage, Transformer } from "react-konva";
-import useImage from "use-image";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Stage, Layer, Transformer } from "react-konva";
 import { nanoid } from "nanoid";
 import {
   DndContext,
@@ -13,34 +12,10 @@ import {
   SortableContext,
   verticalListSortingStrategy,
   arrayMove,
-  useSortable,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
-type Kind = "frame" | "photo";
-type BaseLayer = {
-  id: string;
-  kind: Kind;
-  name: string;
-  visible: boolean;
-  src: string;
-};
-type PhotoLayer = BaseLayer & {
-  kind: "photo";
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rotation: number;
-  naturalW: number;
-  naturalH: number;
-};
-type FrameLayer = BaseLayer & {
-  kind: "frame";
-  naturalW: number;
-  naturalH: number;
-};
-type AnyLayer = PhotoLayer | FrameLayer;
+import { LayerRow } from "./booth-resize/LayerRow";
+import FrameNode from "./booth-resize/FrameNode";
+import PhotoNode from "./booth-resize/PhotoNode";
 
 function useContainerSize() {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -65,140 +40,6 @@ function pickFile(accept: string) {
     input.click();
   });
 }
-
-function LayerRow({
-  item,
-  indexFromTop,
-  selected,
-  onToggleVisible,
-  onClick,
-}: {
-  item: AnyLayer;
-  indexFromTop: number;
-  selected: boolean;
-  onToggleVisible: () => void;
-  onClick: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: item.id });
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    cursor: "grab",
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: 10,
-    borderRadius: 8,
-    background: selected ? "#1f6feb22" : "#161b22",
-    border: selected ? "1px solid #58a6ff" : "1px solid #30363d",
-  };
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      onClick={onClick}
-    >
-      <div
-        title={item.visible ? "Hide" : "Show"}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleVisible();
-        }}
-        style={{
-          width: 26,
-          height: 26,
-          borderRadius: 6,
-          border: "1px solid #30363d",
-          display: "grid",
-          placeItems: "center",
-          background: item.visible ? "#0f5132" : "#5a1e02",
-        }}
-      >
-        {item.visible ? "👁" : "🚫"}
-      </div>
-      <div
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: 6,
-          background: "#21262d",
-          color: "#c9d1d9",
-          display: "grid",
-          placeItems: "center",
-          fontWeight: 700,
-        }}
-      >
-        {indexFromTop}
-      </div>
-      <div style={{ color: "#c9d1d9", fontWeight: 600, flex: 1 }}>
-        {item.name}
-        {item.kind === "frame" ? " (Frame)" : ""}
-      </div>
-      <div style={{ color: "#8b949e", fontSize: 12 }}>drag ⇅</div>
-    </div>
-  );
-}
-
-const FrameNode = React.memo(function FrameNode({
-  layer,
-  frameW,
-  frameH,
-}: {
-  layer: FrameLayer;
-  frameW: number;
-  frameH: number;
-}) {
-  const [imgEl] = useImage(layer.src, "anonymous");
-  console.log("frameW", frameW);
-  console.log("frameH", frameH);
-  return (
-    <KonvaImage
-      image={imgEl || undefined}
-      x={0}
-      y={0}
-      width={frameW}
-      height={frameH}
-      listening={false}
-    />
-  );
-});
-
-const PhotoNode = React.memo(function PhotoNode({
-  layer,
-  registerRef,
-  onSelect,
-  onDragEnd,
-  onTransformEnd,
-}: {
-  layer: PhotoLayer;
-  registerRef: (id: string, node: any) => void;
-  onSelect: () => void;
-  onDragEnd: () => void;
-  onTransformEnd: () => void;
-}) {
-  const [imgEl] = useImage(layer.src, "anonymous");
-  return (
-    <KonvaImage
-      ref={(node) => {
-        if (node) registerRef(layer.id, node);
-      }}
-      image={imgEl || undefined}
-      x={layer.x}
-      y={layer.y}
-      width={layer.width}
-      height={layer.height}
-      rotation={layer.rotation}
-      draggable
-      onDragEnd={onDragEnd}
-      onTransformEnd={onTransformEnd}
-      onClick={onSelect}
-      onTap={onSelect}
-    />
-  );
-});
 
 export default function App() {
   const [layers, setLayers] = useState<AnyLayer[]>([]);
